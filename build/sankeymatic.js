@@ -1040,7 +1040,7 @@ function render_sankey(allNodes, allFlows, cfg, numberStyle) {
             return prev + (cur.flows[IN].length == 0 ? cur.value : 0);
           }, 0),
       percentage = cfg.labelpercentage_appears && total != 0
-        ? ` (${Number.parseFloat((n.value / total * 100).toFixed(cfg.labelpercentage_precision))}%)`
+        ? String(Number.parseFloat((n.value / total * 100).toFixed(cfg.labelpercentage_precision))) + '%'
         : '',
       nameParts = String(n.name).split('\\n'), // Use \n for multiline labels
       nameObjs = nameParts.map((part, i) => ({
@@ -1048,15 +1048,18 @@ function render_sankey(allNodes, allFlows, cfg, numberStyle) {
         weight: cfg.labelname_weight,
         size: nameSize,
         newLine: i > 0
-          || (cfg.labelvalue_appears && cfg.labelvalue_position === 'above'),
+          || ((cfg.labelvalue_appears || cfg.labelpercentage_appears) && cfg.labelvalue_position === 'above'),
       })),
       valObj = {
-        txt: withUnits(n.value) + percentage,
+        txt: (cfg.labelvalue_appears ? withUnits(n.value) : '') +
+          (cfg.labelpercentage_appears && percentage != ''
+            ? (cfg.labelvalue_appears ? ` (${percentage})` : percentage)
+            : ''),
         weight: cfg.labelvalue_weight,
         size: valueSize,
-        newLine: (cfg.labelname_appears && cfg.labelvalue_position === 'below'),
+        newLine: ((cfg.labelname_appears || cfg.labelpercentage_appears) && cfg.labelvalue_position === 'below'),
       };
-    if (!cfg.labelvalue_appears) { return nameObjs; }
+    if (!cfg.labelvalue_appears && !cfg.labelpercentage_appears) { return nameObjs; }
     if (!cfg.labelname_appears) { return [valObj]; }
     switch (cfg.labelvalue_position) {
       case 'before': // separate the value from the name with 1 space
@@ -1103,7 +1106,7 @@ function render_sankey(allNodes, allFlows, cfg, numberStyle) {
       = (v) => (minVal === maxVal ? 1 : (v - minVal) / (maxVal - minVal));
 
   // Set up label information for each Node:
-  if (cfg.labelname_appears || cfg.labelvalue_appears) {
+  if (cfg.labelname_appears || cfg.labelvalue_appears || cfg.labelpercentage_appears) {
     allNodes.filter(shadowFilter)
       .filter((n) => !n.hideLabel)
       .forEach((n) => {
@@ -1719,7 +1722,7 @@ function render_sankey(allNodes, allFlows, cfg, numberStyle) {
       .text('Made at SankeyMATIC.com');
   }
 
-  if (!cfg.labels_hide && (cfg.labelname_appears || cfg.labelvalue_appears)) {
+  if (!cfg.labels_hide && (cfg.labelname_appears || cfg.labelvalue_appears || cfg.labelpercentage_appears)) {
     // Add labels in a distinct layer on the top (so nodes can't block them)
     diagLabels.selectAll()
       .data(allNodes.filter(shadowFilter))
